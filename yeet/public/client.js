@@ -1,6 +1,6 @@
 // getting dom elements
 
-var myID = (Math.random() * 1000000).toString();
+var myID = Math.random().toString();
 
 var divSelectRoom = document.getElementById("selectRoom");
 var divConsultingRoom = document.getElementById("consultingRoom");
