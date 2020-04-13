@@ -14,39 +14,38 @@ app.use(express.static('public'));
 io.on('connection', function (socket) {
     console.log('a user connected');
 
-    socket.on('create or join', function (room) {
-        console.log('create or join to room ', room);
+    socket.on('create', function(room){
+        console.log('create room ', room);
+        socket.join(room);
+        socket.emit('created', room);
+    });
+    
+    socket.on('join', function (room) {
+        console.log('join room ', room);
         
         var myRoom = io.sockets.adapter.rooms[room] || { length: 0 };
         var numClients = myRoom.length;
 
-        console.log(room, ' has ', numClients, ' clients');
-
-        if (numClients == 0) {
-            socket.join(room);
-            socket.emit('created', room);
-        } else if (numClients == 1) {
-            socket.join(room);
-            socket.emit('joined', room);
-        } else {
-            socket.emit('full', room);
-        }
+        console.log('Number of users: ', numClients);
+        
+        socket.join(room);
+        socket.emit('joined');
     });
 
-    socket.on('ready', function (room){
-        socket.broadcast.to(room).emit('ready');
+    socket.on('ready', function (comm){
+        socket.broadcast.to(comm.room).emit('ready', comm);
+    });
+
+    socket.on('offer', function(comm){
+        socket.broadcast.to(comm.room).emit('offer',comm.sdp);
+    });
+
+    socket.on('answer', function(comm){
+        socket.broadcast.to(comm.room).emit('answer',comm.sdp);
     });
 
     socket.on('candidate', function (event){
         socket.broadcast.to(event.room).emit('candidate', event);
-    });
-
-    socket.on('offer', function(event){
-        socket.broadcast.to(event.room).emit('offer',event.sdp);
-    });
-
-    socket.on('answer', function(event){
-        socket.broadcast.to(event.room).emit('answer',event.sdp);
     });
 
 });

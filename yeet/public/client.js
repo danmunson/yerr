@@ -1,13 +1,21 @@
 // getting dom elements
+
+var myID = (Math.random() * 1000000).toString();
+
 var divSelectRoom = document.getElementById("selectRoom");
 var divConsultingRoom = document.getElementById("consultingRoom");
-var inputRoomNumber = document.getElementById("roomNumber");
+
+var btnMakeRoom = document.getElementById("makeRoom");
+var makeRoomNumber = document.getElementById("makeNumber");
+
 var btnGoRoom = document.getElementById("goRoom");
+var goRoomNumber = document.getElementById("goNumber");
+
 var localVideo = document.getElementById("localVideo");
-var remoteVideo = document.getElementById("remoteVideo");
+//var remoteVideo = document.getElementById("remoteVideo");
 
 // variables
-var roomNumber;
+var roomNumber; // current room number
 var localStream;
 var remoteStream;
 var rtcPeerConnection;
@@ -20,19 +28,45 @@ var iceServers = {
 var streamConstraints = { audio: true, video: true };
 var isCaller;
 
+var Comm = class {
+    constructor(room, data=null){
+        this.sender = myID;
+        this.room = room;
+        if(data){
+            for (var key in data){
+                this[key] = data[key];
+            }
+        }
+    }
+};
+
 // Let's do this
 var socket = io();
 
-btnGoRoom.onclick = function () {
-    if (inputRoomNumber.value === '') {
+
+btnMakeRoom.onclick = function () {
+    if (makeRoomNumber.value === '') {
         alert("Please type a room number")
     } else {
-        roomNumber = inputRoomNumber.value;
-        socket.emit('create or join', roomNumber);
+        roomNumber = makeRoomNumber.value;
+        socket.emit('create', makeNumber);
         divSelectRoom.style = "display: none;";
         divConsultingRoom.style = "display: block;";
     }
 };
+
+
+btnGoRoom.onclick = function () {
+    if (goRoomNumber.value === '') {
+        alert("Please type a room number")
+    } else {
+        roomNumber = goRoomNumber.value;
+        socket.emit('join', goNumber);
+        divSelectRoom.style = "display: none;";
+        divConsultingRoom.style = "display: block;";
+    }
+};
+
 
 // message handlers
 socket.on('created', function (room) {
@@ -49,7 +83,7 @@ socket.on('joined', function (room) {
     navigator.mediaDevices.getUserMedia(streamConstraints).then(function (stream) {
         localStream = stream;
         localVideo.srcObject = stream;
-        socket.emit('ready', roomNumber);
+        socket.emit('ready', new Comm(room));
     }).catch(function (err) {
         console.log('An error ocurred when accessing media devices', err);
     });
@@ -63,8 +97,8 @@ socket.on('candidate', function (event) {
     rtcPeerConnection.addIceCandidate(candidate);
 });
 
-socket.on('ready', function () {
-    if (isCaller) {
+socket.on('ready', function (comm) {
+    if (myID == commsender) {
         rtcPeerConnection = new RTCPeerConnection(iceServers);
         rtcPeerConnection.onicecandidate = onIceCandidate;
         rtcPeerConnection.ontrack = onAddStream;
@@ -73,20 +107,20 @@ socket.on('ready', function () {
         rtcPeerConnection.createOffer()
             .then(sessionDescription => {
                 rtcPeerConnection.setLocalDescription(sessionDescription);
-                socket.emit('offer', {
+                socket.emit('offer', Comm(comm.room, {
                     type: 'offer',
-                    sdp: sessionDescription,
-                    room: roomNumber
-                });
+                    sdp: sessionDescription
+                }));
             })
             .catch(error => {
-                console.log(error)
+                console.log(error);
             })
     }
 });
 
-socket.on('offer', function (event) {
-    if (!isCaller) {
+socket.on('offer', function (comm) {
+    if (myID != comm.sender) {
+        var event = comm.event;
         rtcPeerConnection = new RTCPeerConnection(iceServers);
         rtcPeerConnection.onicecandidate = onIceCandidate;
         rtcPeerConnection.ontrack = onAddStream;
@@ -96,11 +130,10 @@ socket.on('offer', function (event) {
         rtcPeerConnection.createAnswer()
             .then(sessionDescription => {
                 rtcPeerConnection.setLocalDescription(sessionDescription);
-                socket.emit('answer', {
+                socket.emit('answer', Comm(comm.room, {
                     type: 'answer',
-                    sdp: sessionDescription,
-                    room: roomNumber
-                });
+                    sdp: sessionDescription
+                }));
             })
             .catch(error => {
                 console.log(error)
