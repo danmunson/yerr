@@ -120,13 +120,12 @@ socket.on('ready', function (comm) {
 
 socket.on('offer', function (comm) {
     if (myID != comm.sender) {
-        var event = comm.event;
         rtcPeerConnection = new RTCPeerConnection(iceServers);
         rtcPeerConnection.onicecandidate = onIceCandidate;
         rtcPeerConnection.ontrack = onAddStream;
         rtcPeerConnection.addTrack(localStream.getTracks()[0], localStream);
         rtcPeerConnection.addTrack(localStream.getTracks()[1], localStream);
-        rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(event));
+        rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(comm));
         rtcPeerConnection.createAnswer()
             .then(sessionDescription => {
                 rtcPeerConnection.setLocalDescription(sessionDescription);
@@ -141,8 +140,8 @@ socket.on('offer', function (comm) {
     }
 });
 
-socket.on('answer', function (event) {
-    rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(event));
+socket.on('answer', function (comm) {
+    rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(comm));
 })
 
 // handler functions
@@ -160,6 +159,13 @@ function onIceCandidate(event) {
 }
 
 function onAddStream(event) {
+    var remoteVideo = newRemoteVideo();
     remoteVideo.srcObject = event.streams[0];
     remoteStream = event.stream;
+}
+
+function newRemoteVideo(){
+    var videoNode = document.createElement("video");
+    document.getElementById("consultingRoom").appendChild(videoNode);
+    return videoNode;
 }
