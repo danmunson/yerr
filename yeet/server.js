@@ -21,31 +21,36 @@ io.on('connection', function (socket) {
     });
     
     socket.on('join', function (room) {
-        console.log('join room ', room);
-        
         var myRoom = io.sockets.adapter.rooms[room] || { length: 0 };
         var numClients = myRoom.length;
 
         console.log('Number of users: ', numClients);
-        
         socket.join(room);
-        socket.emit('joined');
+        console.log('New number of users: ', io.sockets.adapter.rooms[room].length);
+        socket.emit('joined', room);
     });
 
     socket.on('ready', function (comm){
-        socket.broadcast.to(comm.room).emit('ready', comm);
+        console.log('ready ', comm);
+        //socket.broadcast.to(comm.room).emit('ready', comm);
+        socket.emit('ready', comm);
     });
 
     socket.on('offer', function(comm){
-        socket.broadcast.to(comm.room).emit('offer',comm.sdp);
+        console.log('offer ', comm.room);
+        //socket.broadcast.to(comm.room).emit('offer',comm.sdp);
+        socket.broadcast.to(comm.room).emit('offer',comm);
     });
 
     socket.on('answer', function(comm){
-        socket.broadcast.to(comm.room).emit('answer',comm.sdp);
+        console.log('answer ', comm.room);
+        //socket.broadcast.to(comm.room).emit('answer',comm.sdp);
+        socket.broadcast.to(comm.room).emit('answer',comm);
     });
 
     socket.on('candidate', function (event){
         socket.broadcast.to(event.room).emit('candidate', event);
+        //socket.emit('candidate', event);
     });
 
 });
