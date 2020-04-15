@@ -1,6 +1,6 @@
 // getting dom elements
 
-var mySession = {
+globalThis.mySession = {
     myID : Math.random().toString(),
     rooms : {}
 };
@@ -29,7 +29,7 @@ var selfStreamConstraints = { audio: false, video: true };
 
 function Comm(room, data=null){
     obj = {
-        sender : mySession.myID,
+        sender : globalThis.mySession.myID,
         room : room
     };
     if(data){
@@ -62,7 +62,7 @@ socket.on('joined', function (room) {
     console.log('You joined the room');
 
     // set local video
-    mySession.rooms[room] = {}
+    globalThis.mySession.rooms[room] = {}
     navigator.mediaDevices.getUserMedia(selfStreamConstraints).then(function (stream) {
         localVideo.srcObject = stream;
     }).catch(function (err) {
@@ -72,6 +72,7 @@ socket.on('joined', function (room) {
     // set outgoing stream
     navigator.mediaDevices.getUserMedia(outStreamConstraints).then(function (stream) {
         localStream = stream;
+        console.log("local stream ", stream);
         socket.emit('ready', Comm(room));
     }).catch(function (err) {
         console.log('An error ocurred when accessing media devices', err);
@@ -83,7 +84,7 @@ socket.on('ready', function (comm) {
     /*  THIS USER is the only sender
     */
     // do not send "new joiner alert" if no one else is in the room
-    console.log('Ready! Room size is: ', comm);
+    console.log('Ready! Room size is: ', comm.roomSize);
     if (comm.roomSize > 1){
         socket.emit('alert new joiner', comm);
     }
@@ -94,58 +95,70 @@ socket.on('new joiner', function (comm) {
     */
     console.log("New Joiner: ", comm.sender);
 
-    rtcPeerConnection = new RTCPeerConnection(iceServers);
-    mySession.rooms[comm.room][comm.sender] = {
-        rtcPC : rtcPeerConnection,
-        answered : false
+    globalThis.mySession.rooms[comm.room][comm.sender] = {
+        connected : false,
+        hasCandidate : false,
+        rtcPC : new RTCPeerConnection(iceServers)
     }
 
-    rtcPeerConnection = new RTCPeerConnection(iceServers);
-    rtcPeerConnection.onicecandidate = setOnIceCandidate(comm.room);
+    console.log('making offer to ', comm.sender);
+
+    var rtcPeerConnection = globalThis.mySession.rooms[comm.room][comm.sender].rtcPC;
+    rtcPeerConnection.onicecandidate = setOnIceCandidate(globalThis.mySession.myID, comm.room);
     rtcPeerConnection.ontrack = addUserStream(comm.sender, comm.room);
     rtcPeerConnection.addTrack(localStream.getTracks()[0], localStream);
     rtcPeerConnection.addTrack(localStream.getTracks()[1], localStream);
     rtcPeerConnection.createOffer()
         .then(sessionDescription => {
-            rtcPeerConnection.setLocalDescription(sessionDescription);
-            console.log('sdp : ',sessionDescription);
             socket.emit('make offer', Comm(comm.room, {
                 type: 'offer',
                 sdp: sessionDescription
             }));
+            rtcPeerConnection.setLocalDescription(sessionDescription);
         })
         .catch(error => {
             console.log(error);
-        })
+        });
+    
+    globalThis.mySession.rooms[comm.room][comm.sender].rtcPC = rtcPeerConnection;
 });
 
 socket.on('offer', function (comm) {
     /*  Other users are the only senders
     */
     console.log("Offer from ", comm.sender);
+    console.log(mySession);
 
-    rtcPeerConnection = new RTCPeerConnection(iceServers);
-    mySession.rooms[comm.room][comm.sender] = {
-        rtcPC : rtcPeerConnection
+    if (comm.sender in globalThis.mySession.rooms[comm.room]
+        && globalThis.mySession.rooms[comm.room][comm.sender].connected
+    ) return;
+
+    globalThis.mySession.rooms[comm.room][comm.sender] = {
+        connected : true,
+        hasCandidate : false,
+        rtcPC : new RTCPeerConnection(iceServers)
     }
 
-    rtcPeerConnection.onicecandidate = setOnIceCandidate(comm.room);
+    console.log('Making answer for ', comm.sender);
+
+    var rtcPeerConnection = globalThis.mySession.rooms[comm.room][comm.sender].rtcPC;
+    rtcPeerConnection.onicecandidate = setOnIceCandidate(globalThis.mySession.myID, comm.room);
     rtcPeerConnection.ontrack = addUserStream(comm.sender, comm.room);
     rtcPeerConnection.addTrack(localStream.getTracks()[0], localStream);
     rtcPeerConnection.addTrack(localStream.getTracks()[1], localStream);
     rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(comm.sdp));
     rtcPeerConnection.createAnswer()
         .then(sessionDescription => {
-            rtcPeerConnection.setLocalDescription(sessionDescription);
             socket.emit('make answer', Comm(comm.room, {
                 type: 'answer',
                 sdp: sessionDescription
             }));
+            rtcPeerConnection.setLocalDescription(sessionDescription);
         })
         .catch(error => {
             console.log(error)
-        })
-    
+        });
+    globalThis.mySession.rooms[comm.room][comm.sender].rtcPC = rtcPeerConnection;
 });
 
 socket.on('answer', function (comm) {
@@ -153,21 +166,31 @@ socket.on('answer', function (comm) {
         Make sure to not accept answers from users who have already been answered
     */
     console.log("Answer from", comm.sender);
-    if (mySession.rooms[comm.room][comm.sender].answered) return;
-    rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(comm.sdp));
-    mySession.rooms[comm.room][comm.sender].answered = true;
+    if (globalThis.mySession.rooms[comm.room][comm.sender].connected) return;
+
+    console.log("Accepting answer from ", comm.sender);
+    globalThis.mySession.rooms[comm.room][comm.sender].rtcPC.setRemoteDescription(new RTCSessionDescription(comm.sdp));
+    globalThis.mySession.rooms[comm.room][comm.sender].connected = true;
 })
 
 socket.on('candidate', function (event) {
+    console.log("Candidate from", event.sender);
+    if (!(event.sender in globalThis.mySession.rooms[event.room])) return;
+    console.log("Accepting candidate from", event.sender);
+
     var candidate = new RTCIceCandidate({
         sdpMLineIndex: event.label,
         candidate: event.candidate
     });
-    rtcPeerConnection.addIceCandidate(candidate);
+    console.log("mySession ", Object.keys(globalThis.mySession.rooms[Object.keys(globalThis.mySession.rooms)[0]]));
+    //if (event.sender in globalThis.mySession.rooms[event.room]) {
+    console.log("adding ice candidate");
+    globalThis.mySession.rooms[event.room][event.sender].rtcPC.addIceCandidate(candidate);
+    //}
 });
 
 // handler functions
-function setOnIceCandidate(room){
+function setOnIceCandidate(sender, room){
     return function (event){
         if (event.candidate) {
             console.log('sending ice candidate');
@@ -176,7 +199,8 @@ function setOnIceCandidate(room){
                 label: event.candidate.sdpMLineIndex,
                 id: event.candidate.sdpMid,
                 candidate: event.candidate.candidate,
-                room: room
+                room: room,
+                sender: sender
             })
         }
     }
@@ -184,15 +208,14 @@ function setOnIceCandidate(room){
 
 function addUserStream(userID, room){
     return function (event){
-        if ('video' in mySession.rooms[room][userID]) return;
+        if ('video' in globalThis.mySession.rooms[room][userID]) return;
         if ('audio' == event.track.kind) return;
-        
-        remoteVideo = newRemoteVideo();
-        console.log('adding video ', event);
-        remoteVideo.srcObject = event.streams[0];
 
-        mySession.rooms[room][userID]['video'] = remoteVideo;
-        console.log(mySession);
+        console.log('adding user stream');
+        remoteVideo = newRemoteVideo();
+        globalThis.mySession.rooms[room][userID]['video'] = remoteVideo;
+        remoteVideo.srcObject = event.streams[0];
+        console.log("remote stream", event.streams[0]);
     }
 }
 
