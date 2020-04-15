@@ -55,11 +55,12 @@ btnGoRoom.onclick = function () {
 };
 
 socket.on('joined', function (room) {
-    /* THIS USER is the only sender
+    /*  THIS USER is the only sender
+        Pass audio=false to the stream constraints in order to prevent feedback
     */
     console.log('You joined the room');
     mySession.rooms[room] = {}
-    navigator.mediaDevices.getUserMedia(streamConstraints).then(function (stream) {
+    navigator.mediaDevices.getUserMedia({'video':true, 'audio':false}).then(function (stream) {
         localStream = stream;
         localVideo.srcObject = stream;
         socket.emit('ready', Comm(room));
@@ -70,7 +71,7 @@ socket.on('joined', function (room) {
 
 //breaking up joined and ready is a simple way to handle the case where you are the creator
 socket.on('ready', function (comm) {
-    /* THIS USER is the only sender
+    /*  THIS USER is the only sender
     */
     // do not send "new joiner alert" if no one else is in the room
     console.log('Ready! Room size is: ', comm);
@@ -80,13 +81,14 @@ socket.on('ready', function (comm) {
 });
 
 socket.on('new joiner', function (comm) {
-    /* Other users are the only senders
+    /*  Other users are the only senders
     */
     console.log("New Joiner: ", comm.sender);
 
     rtcPeerConnection = new RTCPeerConnection(iceServers);
     mySession.rooms[comm.room][comm.sender] = {
-        rtcPC : rtcPeerConnection
+        rtcPC : rtcPeerConnection,
+        answered : false
     }
 
     rtcPeerConnection = new RTCPeerConnection(iceServers);
@@ -109,7 +111,7 @@ socket.on('new joiner', function (comm) {
 });
 
 socket.on('offer', function (comm) {
-    /* Other users are the only senders
+    /*  Other users are the only senders
     */
     console.log("Offer from ", comm.sender);
 
@@ -138,10 +140,13 @@ socket.on('offer', function (comm) {
 });
 
 socket.on('answer', function (comm) {
-    /* Other users are the only senders
+    /*  Other users are the only senders
+        Make sure to not accept answers from users who have already been answered
     */
     console.log("Answer from", comm.sender);
+    if (mySession.rooms[comm.room][comm.sender].answered) return;
     rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(comm.sdp));
+    mySession.rooms[comm.room][comm.sender].answered = true;
 })
 
 socket.on('candidate', function (event) {
