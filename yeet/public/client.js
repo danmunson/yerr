@@ -24,7 +24,8 @@ var iceServers = {
         { 'urls': 'stun:stun.l.google.com:19302' }
     ]
 }
-var streamConstraints = { audio: true, video: true };
+var outStreamConstraints = { audio: true, video: true };
+var selfStreamConstraints = { audio: false, video: true };
 
 function Comm(room, data=null){
     obj = {
@@ -59,10 +60,18 @@ socket.on('joined', function (room) {
         Pass audio=false to the stream constraints in order to prevent feedback
     */
     console.log('You joined the room');
+
+    // set local video
     mySession.rooms[room] = {}
-    navigator.mediaDevices.getUserMedia({'video':true, 'audio':false}).then(function (stream) {
-        localStream = stream;
+    navigator.mediaDevices.getUserMedia(selfStreamConstraints).then(function (stream) {
         localVideo.srcObject = stream;
+    }).catch(function (err) {
+        console.log('An error ocurred when accessing media devices', err);
+    });
+
+    // set outgoing stream
+    navigator.mediaDevices.getUserMedia(outStreamConstraints).then(function (stream) {
+        localStream = stream;
         socket.emit('ready', Comm(room));
     }).catch(function (err) {
         console.log('An error ocurred when accessing media devices', err);
