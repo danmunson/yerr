@@ -15,12 +15,9 @@ var btnGoRoom = document.getElementById("goRoom");
 var goRoomNumber = document.getElementById("goNumber");
 
 var localVideo = document.getElementById("localVideo");
-//var remoteVideo = document.getElementById("remoteVideo");
 
 // variables
-var roomNumber; // current room number
 var localStream;
-var rtcPeerConnection;
 var iceServers = {
     'iceServers': [
         { 'urls': 'stun:stun.services.mozilla.com' },
@@ -54,7 +51,6 @@ btnGoRoom.onclick = function () {
         socket.emit('join', goNumber);
         divSelectRoom.style = "display: none;";
         divConsultingRoom.style = "display: block;";
-        roomNumber = goNumber;
     }
 };
 
@@ -94,7 +90,7 @@ socket.on('new joiner', function (comm) {
     }
 
     rtcPeerConnection = new RTCPeerConnection(iceServers);
-    rtcPeerConnection.onicecandidate = onIceCandidate;
+    rtcPeerConnection.onicecandidate = setOnIceCandidate(comm.room);
     rtcPeerConnection.ontrack = addUserStream(comm.sender, comm.room);
     rtcPeerConnection.addTrack(localStream.getTracks()[0], localStream);
     rtcPeerConnection.addTrack(localStream.getTracks()[1], localStream);
@@ -122,7 +118,7 @@ socket.on('offer', function (comm) {
         rtcPC : rtcPeerConnection
     }
 
-    rtcPeerConnection.onicecandidate = onIceCandidate;
+    rtcPeerConnection.onicecandidate = setOnIceCandidate(comm.room);
     rtcPeerConnection.ontrack = addUserStream(comm.sender, comm.room);
     rtcPeerConnection.addTrack(localStream.getTracks()[0], localStream);
     rtcPeerConnection.addTrack(localStream.getTracks()[1], localStream);
@@ -157,16 +153,18 @@ socket.on('candidate', function (event) {
 });
 
 // handler functions
-function onIceCandidate(event) {
-    if (event.candidate) {
-        console.log('sending ice candidate');
-        socket.emit('candidate', {
-            type: 'candidate',
-            label: event.candidate.sdpMLineIndex,
-            id: event.candidate.sdpMid,
-            candidate: event.candidate.candidate,
-            room: roomNumber
-        })
+function setOnIceCandidate(room){
+    return function (event){
+        if (event.candidate) {
+            console.log('sending ice candidate');
+            socket.emit('candidate', {
+                type: 'candidate',
+                label: event.candidate.sdpMLineIndex,
+                id: event.candidate.sdpMid,
+                candidate: event.candidate.candidate,
+                room: room
+            })
+        }
     }
 }
 
@@ -182,12 +180,6 @@ function addUserStream(userID, room){
         mySession.rooms[room][userID]['video'] = remoteVideo;
         console.log(mySession);
     }
-}
-
-function onAddStream(event) {
-    remoteVideo = newRemoteVideo();
-    console.log('adding video ', event);
-    remoteVideo.srcObject = event.streams[0];
 }
 
 function newRemoteVideo(){
