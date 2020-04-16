@@ -104,7 +104,7 @@ socket.on('new joiner', function (comm) {
     console.log('making offer to ', comm.sender);
 
     var rtcPeerConnection = globalThis.mySession.rooms[comm.room][comm.sender].rtcPC;
-    rtcPeerConnection.onicecandidate = setOnIceCandidate(globalThis.mySession.myID, comm.room);
+    rtcPeerConnection.onicecandidate = setOnIceCandidate(globalThis.mySession.myID, comm.room, comm.sender);
     rtcPeerConnection.ontrack = addUserStream(comm.sender, comm.room);
     rtcPeerConnection.addTrack(localStream.getTracks()[0], localStream);
     rtcPeerConnection.addTrack(localStream.getTracks()[1], localStream);
@@ -115,7 +115,6 @@ socket.on('new joiner', function (comm) {
                 type: 'offer',
                 sdp: sessionDescription
             }));
-            //rtcPeerConnection.setLocalDescription(sessionDescription);
         })
         .catch(error => {
             console.log(error);
@@ -142,11 +141,18 @@ socket.on('offer', function (comm) {
     console.log('Making answer for ', comm.sender);
 
     var rtcPeerConnection = globalThis.mySession.rooms[comm.room][comm.sender].rtcPC;
-    rtcPeerConnection.onicecandidate = setOnIceCandidate(globalThis.mySession.myID, comm.room);
+    rtcPeerConnection.onicecandidate = setOnIceCandidate(globalThis.mySession.myID, comm.room, comm.sender);
     rtcPeerConnection.ontrack = addUserStream(comm.sender, comm.room);
     rtcPeerConnection.addTrack(localStream.getTracks()[0], localStream);
     rtcPeerConnection.addTrack(localStream.getTracks()[1], localStream);
     rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(comm.sdp));
+
+    if ('iceCandidateList' in globalThis.mySession.rooms[comm.room][comm.sender]) {
+        for (var ic in globalThis.mySession.rooms[comm.room][comm.sender].rtcPC.iceCandidateList){
+            rtcPeerConnection.addIceCandidate(ic);
+        }
+    }
+
     rtcPeerConnection.createAnswer()
         .then(sessionDescription => {
             rtcPeerConnection.setLocalDescription(sessionDescription);
@@ -154,7 +160,6 @@ socket.on('offer', function (comm) {
                 type: 'answer',
                 sdp: sessionDescription
             }));
-            //rtcPeerConnection.setLocalDescription(sessionDescription);
         })
         .catch(error => {
             console.log(error)
@@ -171,25 +176,42 @@ socket.on('answer', function (comm) {
     console.log("Accepting answer from ", comm.sender);
     globalThis.mySession.rooms[comm.room][comm.sender].rtcPC.setRemoteDescription(new RTCSessionDescription(comm.sdp));
     globalThis.mySession.rooms[comm.room][comm.sender].connected = true;
+
+    if ('iceCandidateList' in globalThis.mySession.rooms[comm.room][comm.sender]) {
+        for (var ic in globalThis.mySession.rooms[comm.room][comm.sender].rtcPC.iceCandidateList){
+            rtcPeerConnection.addIceCandidate(ic);
+        }
+    }
 })
 
 socket.on('candidate', function (event) {
     console.log("Candidate from", event.sender);
-    if (globalThis.mySession.rooms[event.room][event.sender].hasCandidate) {
-        console.log('rejecting sender ', event.sender); 
-        return;
+    //if (globalThis.mySession.rooms[event.room][event.sender].hasCandidate) {
+    //    console.log('rejecting sender ', event.sender); 
+    //    return;
+    //}
+    if (event.recipient == globalThis.mySession.myID){
+        globalThis.mySession.rooms[event.room][event.sender].hasCandidate = true;
+        console.log("Accepting candidate from", event.sender);
+        var candidate = new RTCIceCandidate({
+            sdpMLineIndex: event.label,
+            candidate: event.candidate
+        });
+        if (globalThis.mySession.rooms[event.room][event.sender].rtcPC.currentRemoteDescription == null){
+            if ('iceCandidateList' in globalThis.mySession.rooms[event.room][event.sender]){
+                globalThis.mySession.rooms[event.room][event.sender].iceCandidateList.push(candidate);
+            } else {
+                globalThis.mySession.rooms[event.room][event.sender].iceCandidateList = [candidate];
+            }
+        } else {
+            globalThis.mySession.rooms[event.room][event.sender].rtcPC.addIceCandidate(candidate);
+        }
     }
-    globalThis.mySession.rooms[event.room][event.sender].hasCandidate = true;
-    console.log("Accepting candidate from", event.sender);
-    var candidate = new RTCIceCandidate({
-        sdpMLineIndex: event.label,
-        candidate: event.candidate
-    });
-    globalThis.mySession.rooms[event.room][event.sender].rtcPC.addIceCandidate(candidate);
 });
 
+
 // handler functions
-function setOnIceCandidate(sender, room){
+function setOnIceCandidate(sender, room,  recipient){
     return function (event){
         if (event.candidate) {
             console.log('sending ice candidate');
@@ -199,7 +221,8 @@ function setOnIceCandidate(sender, room){
                 id: event.candidate.sdpMid,
                 candidate: event.candidate.candidate,
                 room: room,
-                sender: sender
+                sender: sender,
+                recipient: recipient
             })
         }
     }
