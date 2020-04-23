@@ -4,7 +4,10 @@
   "description": "Multiparty chat rooms",
   "main": "server.js",
   "dependencies": {
+    "body-parser": "^1.19.0",
+    "ejs": "^3.0.2",
     "express": "^4.16.4",
+    "mongoose": "^5.9.10",
     "socket.io": "^2.2.0"
   }
 }
