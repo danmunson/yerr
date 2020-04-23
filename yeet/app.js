@@ -15,6 +15,8 @@ db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
+ // set the view engine to ejs
+app.set('view engine', 'ejs')
 app.use('/channels', channel);
 
 let port = 1234;

@@ -1,0 +1,23 @@
+<html>
+        <head>
+                <style>
+              .btn {
+                border: none;
+                background-color: inherit;
+                padding: 14px 28px;
+                font-size: 16px;
+                cursor: pointer;
+                display: inline-block;
+                color: dodgerblue;
+              }
+              .btn:hover {background: rgb(168, 100, 100);}
+                </style>
+                </head>
+<div class="list-group">
+    
+<!-- loop over blog posts and render them -->
+<% channels.forEach((channel) => { %>
+    <li><button class="btn channel"><%= channel.channel_id %></button></li>
+<% }) %>
+</div>
+</html>

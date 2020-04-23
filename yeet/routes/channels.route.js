@@ -10,5 +10,6 @@ router.get('/test', channels_controller.test);
 
 router.post('/createChannel', channels_controller.channel_create);
 
+router.get('/home/:id', channels_controller.channel_find_all_for_user);
 
 module.exports = router;

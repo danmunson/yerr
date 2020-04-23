@@ -28,7 +28,7 @@ let ChannelSchema = new Schema({
     name: {type: String, required: true, max: 100},
     channel_id: {type: String, required: true},
     participants: [{
-        userId: String
+        userId: [String]
       }]
 });
 
