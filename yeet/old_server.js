@@ -13,31 +13,41 @@ app.use(express.static('public'));
 // signaling
 io.on('connection', function (socket) {
     console.log('a user connected');
+    
+    socket.on('join', function (room) {
+        /* THIS USER is the only recipient
+        */
+        socket.join(room);
+        console.log('New number of users: ', io.sockets.adapter.rooms[room].length);
+        socket.emit('joined', room);
+    });
 
-    socket.on('join', function(channelID){
-        socket.join(channelID);
-        socket.emit('successful join', channelID);
+    socket.on('ready', function (comm){
+        /* THIS USER is the only recipient
+        */
+        comm['roomSize'] = io.sockets.adapter.rooms[comm.room].length;
+        socket.emit('ready', comm);
     });
 
     socket.on('alert new joiner', function (comm){
         /* THIS USER is the only recipient
         */
-        socket.broadcast.to(comm.channel).emit('new joiner', comm);
-        console.log('new joiner: ', comm.channel, comm.sender, io.sockets.adapter.rooms[comm.channel].length);
+        console.log('New Joiner: ', comm.sender);
+        socket.broadcast.to(comm.room).emit('new joiner', comm);
     });
 
     socket.on('make offer', function(comm){
         /* Other users are the only recipients
         */
-        console.log('make offer ', comm.sender, comm.channel);
-        socket.broadcast.to(comm.channel).emit('offer', comm);
+        console.log('make offer ', comm.sender);
+        socket.broadcast.to(comm.room).emit('offer',comm);
     });
 
     socket.on('make answer', function(comm){
         /* Other users are the only recipients
         */
-        console.log('make answer ', comm.sender, comm.channel);
-        socket.broadcast.to(comm.channel).emit('answer', comm);
+        console.log('make answer ', comm.sender);
+        socket.broadcast.to(comm.room).emit('answer',comm);
     });
 
     socket.on('candidate', function (event){
