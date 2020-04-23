@@ -110,7 +110,7 @@ export class NetworkAmbassador {
                 sdpMLineIndex: event.label,
                 candidate: event.candidate
             });
-            var PCM = self.channels[event.channel].peers[comm.sender].PCM;
+            var PCM = self.channels[event.channel].peers[event.sender].PCM;
             if (PCM.hasRemoteDesc()) {
                 PCM.addIceCandidate(candidate);
             } else {

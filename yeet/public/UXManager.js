@@ -63,20 +63,21 @@ export class UXManager {
 
     generateOnNewUserStream(self){
         // currently only returning homeroom option
-        return function(stream) {
+        return function(event, stream) {
             console.log("adding remote stream", stream);
             var vid = Object.keys(self.renderNodes).length + 1;
 
             var renderNode = self.newRemoteVideo(
                 vid,
                 document.getElementById("homeChannel"),
-                stream
+                stream,
+                event
             );
             self.renderNodes[vid] = renderNode;
         }
     }
 
-    newRemoteVideo(videoID, parentNode, stream){
+    newRemoteVideo(videoID, parentNode, stream, event){
         console.log('track type', event.track.kind);
         if ('audio' == event.track.kind) return;
 

@@ -32,13 +32,13 @@ export class PeerConnectionManager {
         
         function generateOnConnStateChange(self){
             return function(event) {
-                console.log(self.rtcpc.connectionState);
+                console.log("PC State:", self.rtcpc.connectionState);
             }
         }
 
         function generateOnIceConnStateChange(self){
             return function(event) {
-                console.log(self.rtcpc.iceConnectionState);
+                console.log("ICE State:", self.rtcpc.iceConnectionState);
             }
         }
 
@@ -103,7 +103,7 @@ export class PeerConnectionManager {
 
     // utils
     addIceCandidate(candidate){
-        this.addIceCandidate(candidate);
+        this.rtcpc.addIceCandidate(candidate);
     }
 
     queueIceCandidate(candidate){
@@ -139,7 +139,7 @@ export class PeerConnectionManager {
         return function (event){
             self.channels.in[event.track.kind] = event.streams[0];
             if (self.onNewUserStream){
-                self.onNewUserStream(event.streams[0]);
+                self.onNewUserStream(event, event.streams[0]);
             }
         }
     }

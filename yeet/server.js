@@ -43,7 +43,8 @@ io.on('connection', function (socket) {
     socket.on('candidate', function (event){
         /* Other users are the only recipients
         */
-        socket.broadcast.to(event.room).emit('candidate', event);
+        console.log("forwarding candidate from", event.sender);
+        socket.broadcast.to(event.channel).emit('candidate', event);
     });
 
 });
