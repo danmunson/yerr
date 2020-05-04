@@ -1,0 +1,69 @@
+body {
+    background-color: #323a4a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+#name-header {
+    color: cyan;
+    font-family: "Lucida Grande";
+    padding-bottom: 25px;
+}
+
+div#joinRoom {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    font-size: 30px;
+    color: #66696e;
+}
+
+input#roomId {
+    background-color: #323a4a;
+    border: 2px solid dimgrey;
+    font-size: 30px;
+    color: cyan;
+    text-align: center;
+
+    margin: 12px;
+    width: 10vw;
+    height: 40px;
+
+    -webkit-transition: all 0.30s ease-in-out;
+    -moz-transition: all 0.30s ease-in-out;
+    -ms-transition: all 0.30s ease-in-out;
+    -o-transition: all 0.30s ease-in-out;
+}
+
+input#roomId:hover {
+    background-color: transparent;
+    border: 2px solid cyan;
+    outline: none;
+}
+
+input#roomId:focus {
+    background-color: transparent;
+    border: 2px solid cyan;
+    box-shadow: 0px 0px 5px dimgrey;
+    outline: none;
+}
+
+button#goRoom {
+    background-color: transparent;
+    border: 1px black;
+    padding: 5px 5px;
+    margin-right: 25px;
+
+    color: dimgrey;
+    text-align: center;
+    font-size: 30px;
+    font-family: "Lucida Grande";
+}
+
+label {
+    color: #66696e;
+    font-family: "Lucida Grande";
+}

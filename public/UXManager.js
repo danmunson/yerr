@@ -17,7 +17,7 @@ export class UXManager {
     
     setupInput(){
         var btnGoRoom = document.getElementById("goRoom");
-        var goRoomNumber = document.getElementById("goNumber");
+        var goRoomNumber = document.getElementById("roomId");
         var divSelectRoom = document.getElementById("selectRoom");
         var divHomeChannel = document.getElementById("homeChannel");
 
